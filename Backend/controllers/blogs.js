@@ -3,7 +3,7 @@ require('express-async-errors')
 const Blog = require('../models/blogs')
 
 blogRouter.get('/', async (request, response) => {
-  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1 })
+  const blogs = await Blog.find({}).populate('user', { username: 1, name: 1, id: 1 })
   response.json(blogs)
 })
 
@@ -38,10 +38,14 @@ blogRouter.delete('/:id', async (request, response) => {
 })
 
 blogRouter.put('/:id', async (request, response) => {
-  if(!request.user) {
-    return response.status(401).send('For this you need to be logged in')
-  }else if(!request.user.blogs.find(blog => String(blog) === request.params.id)) {
-    return response.status(404).send('non existent ID')
+  const existingBlog = await Blog.findById(request.params.id)
+  if((existingBlog.title !== request.body.title) || (existingBlog.author !== request.body.author) || (existingBlog.url !== request.body.url)) {
+    if(!request.user) {
+      return response.status(401).send('For this you need to be logged in')
+    }else if(!request.user.blogs.find(blog => String(blog) === request.params.id)) {
+      return response.status(404).send('non existent ID')
+    }
+    return response.status(403).send('Not your blog')
   }
   const body = request.body
   const blog = {
